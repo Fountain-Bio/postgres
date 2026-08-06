@@ -1,0 +1,27 @@
+version: 2
+
+updates:
+  # Dependabot's docker file fetcher matches any filename containing "dockerfile" or
+  # "containerfile", case-insensitively (DOCKER_REGEXP in dependabot-core), so Dockerfile-17
+  # is picked up without renaming it.
+  #
+  # Each PR here is a PostgreSQL minor release. Read the Dockerfile header before merging:
+  # a bump below the minor version a live data directory runs is a downgrade PostgreSQL does
+  # not support, and merging publishes a new image rather than deploying it.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: docker
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
