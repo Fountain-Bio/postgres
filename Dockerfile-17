@@ -17,7 +17,7 @@
 #      PostgreSQL guarantees minor upgrades, not minor downgrades.
 #   2. Merging does not deploy. Railway pulls the new image on the next redeploy of each
 #      service, so prod moves when you move it.
-FROM ghcr.io/railwayapp-templates/postgres-ssl:17.10
+FROM ghcr.io/railwayapp-templates/postgres-ssl:18.6
 
 # The package major version has to track the base image's major version.
 RUN apt-get update \
