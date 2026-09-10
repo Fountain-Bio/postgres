@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: useblacksmith/setup-docker-builder@v2.1.0
+      - uses: useblacksmith/setup-docker-builder@v2.2.0
 
       # Pull requests build without publishing, so a broken Dockerfile fails review rather
       # than overwriting the tag Railway pulls from.
