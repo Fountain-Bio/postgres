@@ -35,7 +35,7 @@ jobs:
 
       # Pull requests build without publishing, so a broken Dockerfile fails review rather
       # than overwriting the tag Railway pulls from.
-      - uses: docker/login-action@v4.6.0
+      - uses: docker/login-action@v4.7.0
         if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
