@@ -8,9 +8,6 @@
 # `FATAL: could not access file "pg_cron"`. Baking the extension into the image is what
 # makes a redeploy, an image change, or a platform restart survivable.
 #
-# pg_cron drives the Inngest run/trace retention job (`ops/inngest-prune.sql` in the
-# fountain-bio monorepo), which is the only thing keeping those trace stores bounded.
-#
 # The base tag is PINNED rather than floating on `:18` so Dependabot raises a visible PR for
 # each Postgres minor release. Two rules when that PR arrives:
 #   1. Never merge a bump that moves BELOW the minor version a live data directory runs.
