@@ -37,10 +37,11 @@
 # `17-18` tag.
 FROM ghcr.io/railwayapp-templates/postgres-ssl/upgrade:17-18@sha256:b6ff5fcb8a45da6f132fa60c8369d33a562b28d5a0d7ef3a52404b8bf575531f
 
-# The base image's PGDG apt source already lists both the 17 and 18 components. Holding the
-# server packages keeps this install from moving either bundled minor.
-RUN apt-mark hold postgresql-17 postgresql-client-17 postgresql-18 postgresql-client-18 \
-  && apt-get update \
+# The base image's PGDG apt source already lists both the 17 and 18 components. PGDG builds
+# each pg_cron package against the newest server minor and depends on it, so this install
+# can raise postgresql-17 and postgresql-18 past the minors the base image bundles. The
+# runtime images get the same raise from their own pg_cron install, so the 18 binaries that
+# create the new cluster here match the 18 image that serves it afterwards.
+RUN apt-get update \
   && apt-get install -y --no-install-recommends postgresql-17-cron postgresql-18-cron \
-  && apt-mark unhold postgresql-17 postgresql-client-17 postgresql-18 postgresql-client-18 \
   && rm -rf /var/lib/apt/lists/*
