@@ -6,7 +6,9 @@ name: build
 # recognition: no Data tab, and `railway connect` answers "No supported database found in
 # service". A service pointed at a pre-built image keeps it. So this workflow publishes the
 # image and each Railway service stays image-sourced, with Source Image set to
-# ghcr.io/fountain-bio/postgres:17.
+# ghcr.io/fountain-bio/postgres:<major>, for example ghcr.io/fountain-bio/postgres:17.
+# Moving a service from 17 to 18 goes through the upgrade job image published as
+# ghcr.io/fountain-bio/postgres:upgrade-17-18; Dockerfile-upgrade-17-18 has the runbook.
 #
 # The package has to be pullable by Railway. Make it public under the org's package settings,
 # or add registry credentials on each service.
@@ -23,8 +25,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  postgres-17:
+  postgres:
+    name: postgres-${{ matrix.image }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    strategy:
+      # Each image publishes its own tags, so a failed 18 build should still let 17 publish.
+      fail-fast: false
+      matrix:
+        # Each entry builds from Dockerfile-<image> and publishes the `<image>` tag. `17` and
+        # `18` are the runtime images; `upgrade-17-18` is the one-shot in-place upgrade job
+        # described in Dockerfile-upgrade-17-18.
+        image: ['17', '18', 'upgrade-17-18']
     permissions:
       contents: read
       packages: write
@@ -46,16 +57,16 @@ jobs:
         uses: docker/metadata-action@v6.2.0
         with:
           images: ghcr.io/fountain-bio/postgres
-          # `17` is the moving tag Railway points at. The sha tag gives every build a stable
-          # identity, so a bad rollout can be pinned back to a known-good digest.
+          # `<image>` is the moving tag Railway points at. The sha tag gives every build a
+          # stable identity, so a bad rollout can be pinned back to a known-good digest.
           tags: |
-            type=raw,value=17
-            type=raw,value=17-${{ github.sha }}
+            type=raw,value=${{ matrix.image }}
+            type=raw,value=${{ matrix.image }}-${{ github.sha }}
 
       - uses: useblacksmith/build-push-action@v2.3.0
         with:
           context: .
-          file: ./Dockerfile-17
+          file: ./Dockerfile-${{ matrix.image }}
           # Railway runs amd64. Building arm64 as well would double build time for an image
           # nothing pulls on that architecture.
           platforms: linux/amd64

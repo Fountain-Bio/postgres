@@ -3,7 +3,7 @@ version: 2
 updates:
   # Dependabot's docker file fetcher matches any filename containing "dockerfile" or
   # "containerfile", case-insensitively (DOCKER_REGEXP in dependabot-core), so Dockerfile-17
-  # is picked up without renaming it.
+  # and Dockerfile-18 are picked up without renaming them.
   #
   # Each PR here is a PostgreSQL minor release. Read the Dockerfile header before merging:
   # a bump below the minor version a live data directory runs is a downgrade PostgreSQL does
@@ -16,6 +16,15 @@ updates:
       prefix: docker
     labels:
       - dependencies
+    # Each Dockerfile-<major> stays on its own PostgreSQL major. A major bump would point the
+    # `<major>` tag at a server that cannot read the data directories already using it, so
+    # only minor bumps are raised. Adding a new major means adding a new Dockerfile-<major>.
+    # Dockerfile-upgrade-17-18 pins railwayapp-templates/postgres-ssl/upgrade, a separate
+    # dependency name, so this rule does not cover it.
+    ignore:
+      - dependency-name: railwayapp-templates/postgres-ssl
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /

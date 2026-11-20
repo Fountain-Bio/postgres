@@ -8,16 +8,13 @@
 # `FATAL: could not access file "pg_cron"`. Baking the extension into the image is what
 # makes a redeploy, an image change, or a platform restart survivable.
 #
-# pg_cron drives the Inngest run/trace retention job (`ops/inngest-prune.sql` in the
-# fountain-bio monorepo), which is the only thing keeping those trace stores bounded.
-#
 # The base tag is PINNED rather than floating on `:17` so Dependabot raises a visible PR for
 # each Postgres minor release. Two rules when that PR arrives:
 #   1. Never merge a bump that moves BELOW the minor version a live data directory runs.
 #      PostgreSQL guarantees minor upgrades, not minor downgrades.
 #   2. Merging does not deploy. Railway pulls the new image on the next redeploy of each
 #      service, so prod moves when you move it.
-FROM ghcr.io/railwayapp-templates/postgres-ssl:17.10
+FROM ghcr.io/railwayapp-templates/postgres-ssl:17.11
 
 # The package major version has to track the base image's major version.
 RUN apt-get update \
