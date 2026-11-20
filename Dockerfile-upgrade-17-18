@@ -1,0 +1,46 @@
+# One-shot job image that upgrades a PostgreSQL 17 data directory to 18 in place.
+#
+# Railway's dashboard upgrade (Database > Config > Major Version Upgrade) only runs for
+# services on Railway's own postgres-ssl image, so it is unavailable to services on
+# ghcr.io/fountain-bio/postgres. This image runs the same upgrade job that flow uses:
+# Railway's published 17-to-18 job image, which carries both majors' server binaries and
+# runs `pg_upgrade --link` through upgrade-job.sh against the service's own volume.
+#
+# pg_cron has to be added for both majors. Our volumes preload pg_cron, so the 17 server
+# cannot start without postgresql-17-cron, and pg_upgrade's loadable-libraries check fails
+# unless postgresql-18-cron is present for the new cluster. upgrade-job.sh copies the old
+# cluster's shared_preload_libraries onto the 18 server when the .so exists, and pg_cron
+# skips starting its scheduler while pg_upgrade runs the servers in binary-upgrade mode.
+#
+# Runbook, per database service. The job runs as a deployment of the database service so it
+# gets the service's volume and variables (PGDATA, POSTGRES_USER):
+#   1. Take a backup of the service.
+#   2. Set the service's restart policy to Never so a failed job is not rerun on its own.
+#      Set the service variable UPGRADE_JOB_MODE=check, set Source Image to
+#      ghcr.io/fountain-bio/postgres:upgrade-17-18, and deploy. The database is down from here
+#      until step 5. The job exits after one run; read the RAILWAY_UPGRADE_RESULT line in the
+#      deploy logs. Exit 1 lists blockers to fix on 17 before continuing.
+#   3. Set UPGRADE_JOB_MODE=upgrade and redeploy. The job writes a completion marker on the
+#      volume once pg_upgrade succeeds, then swaps directories. Re-running upgrade mode after
+#      a crash resumes from the marker.
+#   4. Remove UPGRADE_JOB_MODE and put the restart policy back.
+#   5. Set Source Image to ghcr.io/fountain-bio/postgres:18 and deploy. The 18 image's
+#      wrapper refuses to boot while an unfinished marker exists or the data directory is
+#      on another major.
+# To back out before step 3 commits, deploy with UPGRADE_JOB_MODE=recover, then return the
+# Source Image to ghcr.io/fountain-bio/postgres:17. After the commit point, restore the backup.
+#
+# The job requires the volume mounted at /var/lib/postgresql/data with PGDATA beneath it,
+# which is the layout Railway's 17 template created.
+#
+# The base is pinned by digest because Railway publishes this image only under the moving
+# `17-18` tag.
+FROM ghcr.io/railwayapp-templates/postgres-ssl/upgrade:17-18@sha256:b6ff5fcb8a45da6f132fa60c8369d33a562b28d5a0d7ef3a52404b8bf575531f
+
+# The base image's PGDG apt source already lists both the 17 and 18 components. Holding the
+# server packages keeps this install from moving either bundled minor.
+RUN apt-mark hold postgresql-17 postgresql-client-17 postgresql-18 postgresql-client-18 \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-17-cron postgresql-18-cron \
+  && apt-mark unhold postgresql-17 postgresql-client-17 postgresql-18 postgresql-client-18 \
+  && rm -rf /var/lib/apt/lists/*
